@@ -1,0 +1,91 @@
+#importing various libraries like Sklearn, NLTK, Keras, Pandas
+
+from keras.models import Sequential
+from keras import layers
+from sklearn.datasets import fetch_20newsgroups
+import nltk
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+import string
+import pandas as pd
+from nltk import pos_tag
+from nltk.stem import PorterStemmer
+
+#Read the Dataset(20 newsgroups) needed for the Analysis
+
+df = pd.read_csv(r'C:\Users\abhinandan nuli\Downloads\emails.csv')
+df = df.head(1000)
+
+#Processing the texts
+
+def process_text(text):
+    nopunc = [char for char in text if char not in string.punctuation]
+    nopunc = ''.join(nopunc)
+    clean_words = [word for word in nopunc.split() if word.lower() not in stopwords.words('english')]
+    return clean_words
+
+df['text'].head().apply(process_text)
+
+#Vectorizing 
+
+from sklearn.feature_extraction.text import CountVectorizer
+messages_bow = CountVectorizer(analyzer=process_text).fit_transform(df['text'])
+
+
+#Split the data into train = 80 and test = 20
+
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(messages_bow, df['spam'], test_size = 0.20, random_state = 0)
+
+
+#Defining the accuracy, activation function etc
+
+input_dim=15382
+model = Sequential()
+model.add(layers.Dense(10, input_dim=input_dim, activation='relu'))
+model.add(layers.Dense(1, activation='sigmoid'))
+
+model.compile(loss='binary_crossentropy', 
+              optimizer='adam', 
+              metrics=['accuracy'])
+model.summary()
+
+
+#Fitting the model
+
+history = model.fit(X_train, y_train,
+                    epochs=10,
+                    verbose=False,
+                    validation_data=(X_test, y_test),
+                    batch_size=10)
+
+loss, accuracy = model.evaluate(X_train, y_train, verbose=False)
+print("Training Accuracy: {:.4f}".format(accuracy))
+loss, accuracy = model.evaluate(X_test, y_test, verbose=False)
+print("Testing Accuracy:  {:.4f}".format(accuracy))
+
+print("--------------done-------------------")
+
+#for plotting only
+
+import matplotlib.pyplot as plt
+plt.style.use('ggplot')
+
+def plot_history(history):
+    acc = history.history['acc']
+    val_acc = history.history['val_acc']
+    loss = history.history['loss']
+    val_loss = history.history['val_loss']
+    x = range(1, len(acc) + 1)
+
+    plt.figure(figsize=(12, 5))
+    plt.subplot(1, 2, 1)
+    plt.plot(x, acc, 'b', label='Training acc')
+    plt.plot(x, val_acc, 'r', label='Validation acc')
+    plt.title('Training and validation accuracy')
+    plt.legend()
+    plt.subplot(1, 2, 2)
+    plt.plot(x, loss, 'b', label='Training loss')
+    plt.plot(x, val_loss, 'r', label='Validation loss')
+    plt.title('Training and validation loss')
+    plt.legend()
